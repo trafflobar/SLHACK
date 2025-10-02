@@ -1,191 +1,450 @@
 <!DOCTYPE html>
-<html lang="si">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>VIRAT HACK PROGRAMM ver4.3</title>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap');
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chicken Road 2 — Fixed Signal Bot</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      body {
+        font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", sans-serif;
+      }
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+        background: radial-gradient(circle at top, #1f2937, #0f172a);
+      }
+      .no-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+      .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+    </style>
+  </head>
+  <body class="bg-slate-950">
+    <div id="root"></div>
 
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background-color: #121212;
-      color: white;
-      overflow-x: hidden;
-    }
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-    .top-bar {
-      background-color: #1f1f1f;
-      padding: 10px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-    }
+    <script type="text/babel">
+      const {
+        useEffect,
+        useMemo,
+        useRef,
+        useState,
+        useCallback,
+      } = React;
 
-    .top-bar-text {
-      font-size: 18px;
-      font-weight: bold;
-      color: #28a745;
-      margin-left: 10px;
-    }
+      function ChickenRoad2SignalBot() {
+        const SIGNALS = useMemo(
+          () => [
+            1.01, 1.03, 1.06, 1.1, 1.15, 1.19, 1.24, 1.3, 1.35, 1.42, 1.48, 1.56,
+            1.65, 1.75, 1.85, 1.98, 2.12, 2.28, 2.47, 2.7, 2.96, 3.28, 3.7, 4.11,
+            4.64, 5.59, 6.5,
+          ],
+          []
+        );
 
-    .top-bar-button {
-      margin-right: 10px;
-      background-color: #ffc107;
-      color: #121212;
-      border: none;
-      padding: 10px 16px;
-      border-radius: 5px;
-      font-weight: bold;
-      cursor: pointer;
-      text-decoration: none;
-    }
+        const forceRender = useState(0)[1];
+        const nowSignalRef = useRef("—");
+        let nowSignal = nowSignalRef.current;
+        const setNowSignal = useCallback((value) => {
+          nowSignalRef.current =
+            typeof value === "function" ? value(nowSignalRef.current) : value;
+          nowSignal = nowSignalRef.current;
+          forceRender((x) => x + 1);
+        }, []);
 
-    .header-text {
-      font-size: 50px;
-      font-weight: bold;
-      color: #28a745;
-      text-align: center;
-      margin-top: 20px;
-      animation: blink 1s infinite alternate;
-    }
+        const [scheduledISO, setScheduledISO] = useState("");
+        const [scheduled, setScheduled] = useState([]);
+        const [log, setLog] = useState([]);
 
-    @keyframes blink {
-      0% { opacity: 1; }
-      50% { opacity: 0.5; }
-      100% { opacity: 1; }
-    }
+        const analysisDelayMs = 1000;
+        const [analyzing, setAnalyzing] = useState(false);
+        const [remainMs, setRemainMs] = useState(analysisDelayMs);
+        const countdownRef = useRef(null);
+        const timeoutsRef = useRef({});
 
-    .photo-wrapper {
-      position: relative;
-      margin-bottom: 20px;
-    }
+        const [pulseKey, setPulseKey] = useState(0);
+        const pulse = () => setPulseKey((k) => k + 1);
 
-    .photo {
-      width: 100%;
-      max-width: 100%;
-      display: block;
-      margin-top: 20px;
-    }
+        const randSignal = useCallback(() => {
+          const idx = Math.floor(Math.random() * SIGNALS.length);
+          return SIGNALS[idx].toFixed(2) + "x";
+        }, [SIGNALS]);
 
-    .signal-overlay {
-      position: absolute;
-      top: 20%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background-color: rgba(0, 0, 0, 0.6);
-      padding: 20px;
-      border-radius: 10px;
-      text-align: center;
-      font-size: 32px;
-      font-family: 'Orbitron', sans-serif;
-      font-weight: 700;
-      color: #39ff14;
-      text-shadow: 0 0 5px #39ff14, 0 0 10px #39ff14;
-      animation: neon-blink 1.5s infinite alternate;
-      display: none;
-      z-index: 10;
-    }
+        const pushLog = useCallback((line) => {
+          const t = new Date().toLocaleTimeString();
+          setLog((prev) => [`[${t}] ${line}`, ...prev].slice(0, 400));
+        }, []);
 
-    @keyframes neon-blink {
-      0% { opacity: 1; }
-      50% { opacity: 0.6; }
-      100% { opacity: 1; }
-    }
+        const startCountdown = useCallback((cb) => {
+          setAnalyzing(true);
+          setRemainMs(analysisDelayMs);
+          const startedAt = Date.now();
+          if (countdownRef.current) clearInterval(countdownRef.current);
+          countdownRef.current = setInterval(() => {
+            const elapsed = Date.now() - startedAt;
+            const left = Math.max(0, analysisDelayMs - elapsed);
+            setRemainMs(left);
+            if (left === 0) {
+              clearInterval(countdownRef.current);
+              countdownRef.current = null;
+              setAnalyzing(false);
+              cb && cb();
+            }
+          }, 100);
+        }, []);
 
-    .signal-note {
-      font-size: 14px;
-      font-weight: normal;
-      color: #ffc107;
-      margin-top: 10px;
-      font-family: Arial, sans-serif;
-      text-shadow: none;
-    }
+        const getSignalNow = useCallback(() => {
+          if (analyzing) return;
+          startCountdown(() => {
+            const sig = randSignal();
+            setNowSignal(sig);
+            pulse();
+            pushLog(`Signal now → ${sig}`);
+          });
+        }, [analyzing, startCountdown, randSignal, pushLog]);
 
-    #analyzeText {
-      text-align: center;
-      font-size: 22px;
-      color: #ffc107;
-      display: none;
-      margin-bottom: 80px;
-    }
+        const scheduleSignal = useCallback(() => {
+          if (!scheduledISO) {
+            alert("Choose date & time first");
+            return;
+          }
+          const when = new Date(scheduledISO).getTime();
+          const delay = when - Date.now();
+          if (Number.isNaN(when) || delay <= 0) {
+            alert("Time must be in the future");
+            return;
+          }
 
-    .button {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      width: 100%;
-      padding: 20px;
-      font-size: 22px;
-      font-weight: bold;
-      text-align: center;
-      background-color: #28a745;
-      border: none;
-      color: white;
-      border-radius: 0;
-      cursor: pointer;
-      transition: background-color 0.3s ease, transform 0.3s ease;
-      animation: blinkButton 1s infinite alternate;
-      z-index: 100;
-    }
+          const id = Math.random().toString(36).slice(2, 9);
+          const label = new Date(when).toLocaleString();
+          const timeoutId = window.setTimeout(() => {
+            const sig = randSignal();
+            setNowSignal(sig);
+            pulse();
+            pushLog(`Scheduled signal fired (${label}) → ${sig}`);
+            setScheduled((prev) => prev.filter((x) => x.id !== id));
+            delete timeoutsRef.current[id];
+          }, delay);
 
-    @keyframes blinkButton {
-      0% { background-color: #28a745; transform: scale(1); }
-      50% { background-color: #218838; transform: scale(1.05); }
-      100% { background-color: #28a745; transform: scale(1); }
-    }
+          timeoutsRef.current[id] = timeoutId;
+          setScheduled((prev) => [...prev, { id, time: when, label }]);
+          pushLog(`Scheduled signal for ${label}`);
+        }, [scheduledISO, randSignal, pushLog]);
 
-    .button.active { background-color: #dc3545; }
+        const cancelAllSafe = useCallback(() => {
+          Object.values(timeoutsRef.current).forEach((timeoutId) =>
+            clearTimeout(timeoutId)
+          );
+          timeoutsRef.current = {};
+          setScheduled([]);
+          pushLog("All scheduled signals cancelled");
+        }, [pushLog]);
 
-    @media (max-width: 768px) {
-      .header-text { font-size: 36px; margin-top: 30px; }
-      .button { font-size: 18px; padding: 16px; }
-      .signal-overlay { font-size: 28px; padding: 15px; }
-    }
+        useEffect(() => {
+          return () => {
+            if (countdownRef.current) {
+              clearInterval(countdownRef.current);
+            }
+            cancelAllSafe();
+          };
+        }, [cancelAllSafe]);
 
-    @media (max-width: 430px) {
-      .header-text { font-size: 32px; }
-      .button { font-size: 16px; padding: 14px; }
-      .signal-overlay { font-size: 24px; padding: 12px; }
-    }
-  </style>
-</head>
-<body>
-  <div class="top-bar">
-    <div class="top-bar-text">📢 සංඥා ක්‍රියාත්මක වෙන්නේ මෙතැනට පමණි</div>
-    <a class="top-bar-button" href="https://reffpa.com/L?tag=d_3713491m_97c_&site=3713491&ad=97&r=registration" target="_blank">🔗 නවතම වෙබ්අඩවිය</a>
-  </div>
+        useEffect(() => {
+          const pass = (msg) => pushLog(`TEST PASS: ${msg}`);
+          const fail = (msg) => pushLog(`TEST FAIL: ${msg}`);
 
-  <div class="header-text">VIRAT HACK PROGRAMM ver4.3</div>
+          (function () {
+            const whitelist = new Set(SIGNALS.map((v) => v.toFixed(2) + "x"));
+            let ok = true;
+            for (let i = 0; i < 100; i += 1) {
+              const sig = randSignal();
+              if (!/^\d+\.?\d{2}x$/.test(sig)) {
+                ok = false;
+                break;
+              }
+              if (!whitelist.has(sig)) {
+                ok = false;
+                break;
+              }
+            }
+            ok
+              ? pass("randSignal whitelist & format")
+              : fail("randSignal out-of-list or bad format");
+          })();
 
-  <div class="photo-wrapper">
-    <img src="https://github.com/aviatorgitsrilanka/1predictkreo/blob/main/ChatGPT%20Image%2015%20апр.%202025%20г.,%2013_11_55.png?raw=true" alt="Team Aviator" class="photo">
-    <div id="signalOverlay" class="signal-overlay"></div>
-  </div>
+          (function () {
+            const seen = new Set();
+            let dup = false;
+            for (const v of SIGNALS) {
+              if (seen.has(v)) {
+                dup = true;
+                break;
+              }
+              seen.add(v);
+            }
+            !dup
+              ? pass("SIGNALS has no duplicates")
+              : fail("SIGNALS contains duplicates");
+          })();
 
-  <div id="analyzeText">Analyzing...</div>
-  <button class="button" id="getSignalButton">🔍 SIGNAL</button>
+          (function () {
+            const iso = new Date(Date.now() + 600).toISOString().slice(0, 16);
+            setScheduledISO(iso);
+            setTimeout(() => {
+              scheduleSignal();
+              setTimeout(() => {
+                const hasTimeout =
+                  Object.keys(timeoutsRef.current).length > 0;
+                if (!hasTimeout) {
+                  fail("scheduleSignal did not register any timeout");
+                  return;
+                }
+                cancelAllSafe();
+                const cleared =
+                  Object.keys(timeoutsRef.current).length === 0;
+                cleared
+                  ? pass("cancelAllSafe clears scheduled timeouts")
+                  : fail("cancelAllSafe did not clear timeouts");
+              }, 60);
+            }, 0);
+          })();
 
-  <script>
-    const getSignalButton = document.getElementById("getSignalButton");
-    const analyzeText = document.getElementById("analyzeText");
-    const signalOverlay = document.getElementById("signalOverlay");
+          (function () {
+            const before = nowSignal;
+            const fireISO = new Date(Date.now() + 400)
+              .toISOString()
+              .slice(0, 16);
+            setScheduledISO(fireISO);
+            setTimeout(() => {
+              scheduleSignal();
+            }, 0);
+            setTimeout(() => {
+              const fired = nowSignal !== before;
+              fired
+                ? pass("scheduled signal fires and updates state")
+                : fail("scheduled signal did not fire in time");
+            }, 900);
+          })();
 
-    getSignalButton.addEventListener("click", () => {
-      getSignalButton.classList.add("active");
-      analyzeText.style.display = "block";
-      signalOverlay.style.display = "none";
-      signalOverlay.innerHTML = "";
+          (function () {
+            const prev = nowSignal;
+            getSignalNow();
+            setTimeout(() => {
+              const overlayGone = !analyzing;
+              const changed = nowSignal !== prev;
+              overlayGone && changed
+                ? pass("analyzing overlay completes and sets signal")
+                : fail("overlay did not complete or signal not set");
+            }, 1300);
+          })();
+        }, []);
 
-      setTimeout(() => {
-        const signal = (Math.random() * (3 - 1) + 1).toFixed(2);
-        analyzeText.style.display = "none";
-        signalOverlay.style.display = "block";
-        signalOverlay.innerHTML = `📈 SIGNAL: x${signal}<div class='signal-note'>🎯 නිරවද්‍යතාවය 75% විතරයි. වැඩි ප්‍රතිඵලයක් කැමති නම්, ඔබේ ගිණුම 5000LKR දක්වා පුරවන්න සහ ටෙලිග්‍රෑම් @virat999bot වෙත පණිවිඩයක් යවන්න.</div>`;
-      }, 2000);
-    });
-  </script>
-</body>
+        const secondsLeft = Math.ceil(remainMs / 100) / 10;
+
+        return (
+          <div className="min-h-screen w-full bg-gradient-to-b from-slate-950 via-slate-950 to-slate-900 text-slate-100 p-4 sm:p-6">
+            <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 lg:grid lg:grid-cols-3">
+              <div className="flex flex-col gap-4 lg:col-span-2">
+                <header className="flex flex-col gap-2 rounded-2xl border border-slate-800/70 bg-slate-900/70 p-4 backdrop-blur">
+                  <h1 className="text-lg font-semibold sm:text-xl">
+                    Chicken Road 2 — Fixed Signal Bot
+                  </h1>
+                  <span className="text-xs text-slate-400 sm:text-sm">
+                    Local time: {new Date().toLocaleString()}
+                  </span>
+                </header>
+
+                <section className="rounded-2xl border border-slate-800/70 bg-slate-900/70 p-4 shadow-xl backdrop-blur">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <h2 className="text-sm font-semibold text-slate-300 sm:text-base">
+                      Time block
+                    </h2>
+                    <button
+                      onClick={cancelAllSafe}
+                      className="order-3 inline-flex items-center justify-center rounded-xl border border-slate-700 px-3 py-2 text-xs font-medium text-slate-200/90 transition hover:bg-slate-800 sm:order-none sm:text-sm"
+                    >
+                      Cancel all
+                    </button>
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-3 md:items-end">
+                    <label className="flex flex-col gap-2 text-xs text-slate-300 md:col-span-2">
+                      <span className="text-[11px] uppercase tracking-wide text-slate-400">
+                        Pick date &amp; time (local)
+                      </span>
+                      <input
+                        type="datetime-local"
+                        className="w-full rounded-xl border border-slate-800 bg-slate-950/80 p-3 text-sm text-slate-100 shadow-inner focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/40"
+                        value={scheduledISO}
+                        onChange={(event) => setScheduledISO(event.target.value)}
+                      />
+                    </label>
+                    <button
+                      onClick={scheduleSignal}
+                      className="rounded-xl bg-cyan-400 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300 active:scale-[0.99]"
+                    >
+                      Schedule Signal
+                    </button>
+                  </div>
+
+                  <div className="mt-4 rounded-2xl border border-slate-800/70 bg-slate-950/50 p-3 text-xs text-slate-400">
+                    {scheduled.length === 0 ? (
+                      <div className="text-center text-slate-500">
+                        No scheduled signals
+                      </div>
+                    ) : (
+                      <ul className="flex max-h-40 flex-col gap-2 overflow-y-auto no-scrollbar">
+                        {[...scheduled]
+                          .sort((a, b) => a.time - b.time)
+                          .map((item) => (
+                            <li
+                              key={item.id}
+                              className="flex items-center justify-between rounded-xl border border-slate-800/60 bg-slate-900/70 px-3 py-2 text-[11px] text-slate-300"
+                            >
+                              <span className="font-medium text-slate-200">
+                                {item.label}
+                              </span>
+                              <span className="text-[10px] text-slate-500">
+                                id:{item.id}
+                              </span>
+                            </li>
+                          ))}
+                      </ul>
+                    )}
+                  </div>
+                </section>
+
+                <section className="rounded-2xl border border-slate-800/70 bg-slate-900/70 p-4 shadow-xl backdrop-blur">
+                  <h2 className="text-sm font-semibold text-slate-300 sm:text-base">
+                    Get Signal
+                  </h2>
+                  <div className="mt-3 flex flex-col-reverse gap-3 sm:flex-row sm:items-center">
+                    <div
+                      key={pulseKey}
+                      className="relative flex-1 select-all rounded-2xl border border-slate-800/80 bg-slate-950/60 py-5 text-center text-3xl font-black tracking-wide shadow-inner transition sm:text-4xl"
+                    >
+                      {nowSignal}
+                      {analyzing && (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-2xl bg-slate-950/80 backdrop-blur">
+                          <svg
+                            className="h-6 w-6 animate-spin text-cyan-300"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            xmlns="http://www.w3.org/2000/svg"
+                            aria-hidden="true"
+                          >
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                            ></circle>
+                            <path
+                              className="opacity-75"
+                              d="M4 12a8 8 0 018-8"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                              strokeLinecap="round"
+                            ></path>
+                          </svg>
+                          <div className="text-base font-semibold">
+                            Analyzing…
+                          </div>
+                          <div className="text-xs text-slate-300">
+                            {secondsLeft.toFixed(1)} s
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      onClick={getSignalNow}
+                      disabled={analyzing}
+                      className={`inline-flex items-center justify-center rounded-xl px-4 py-3 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-cyan-300/40 focus:ring-offset-2 focus:ring-offset-slate-900 sm:w-auto ${
+                        analyzing
+                          ? "cursor-not-allowed border border-cyan-300/40 bg-cyan-400/40 text-slate-800"
+                          : "bg-cyan-400 text-slate-950 hover:bg-cyan-300"
+                      }`}
+                    >
+                      Get Signal Now
+                    </button>
+                  </div>
+                  <p className="mt-3 text-xs text-slate-400">
+                    Signals are randomly picked from a fixed whitelist. No external
+                    connections are made.
+                  </p>
+                </section>
+
+                <section className="rounded-2xl border border-slate-800/70 bg-slate-900/70 p-4 shadow-xl backdrop-blur">
+                  <h2 className="text-sm font-semibold text-slate-300 sm:text-base">
+                    Log
+                  </h2>
+                  <div className="mt-3 h-48 rounded-xl border border-slate-800/60 bg-slate-950/60 p-3 text-xs font-mono text-slate-300 shadow-inner sm:h-56">
+                    <div className="no-scrollbar h-full overflow-y-auto whitespace-pre-wrap leading-relaxed">
+                      {log.length === 0
+                        ? "Ready. Use Get Signal or schedule one."
+                        : log.join("\n")}
+                    </div>
+                  </div>
+                </section>
+              </div>
+
+              <aside className="flex flex-col gap-4">
+                <div className="rounded-2xl border border-slate-800/70 bg-slate-900/70 p-4 shadow-xl backdrop-blur">
+                  <h3 className="text-sm font-semibold text-slate-300 sm:text-base">
+                    Signal whitelist
+                  </h3>
+                  <p className="mt-1 text-xs text-slate-400">
+                    Only these values are ever issued (random order):
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {SIGNALS.map((value) => (
+                      <span
+                        key={value}
+                        className="rounded-lg border border-slate-800/70 bg-slate-950/60 px-2 py-1 text-[11px] font-medium text-slate-200"
+                      >
+                        {value.toFixed(2)}x
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <div className="rounded-2xl border border-slate-800/70 bg-slate-900/70 p-4 shadow-xl backdrop-blur">
+                  <h3 className="text-sm font-semibold text-slate-300 sm:text-base">
+                    About
+                  </h3>
+                  <p className="mt-1 text-xs text-slate-400 leading-relaxed">
+                    This preview is a safe, offline generator. It does not predict
+                    real rounds, connect to any servers, or provide an unfair
+                    advantage in any game.
+                  </p>
+                </div>
+              </aside>
+            </div>
+          </div>
+        );
+      }
+
+      const root = ReactDOM.createRoot(document.getElementById("root"));
+      root.render(<ChickenRoad2SignalBot />);
+    </script>
+  </body>
 </html>
